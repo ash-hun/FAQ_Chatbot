@@ -11,10 +11,10 @@
 - [x] pickle 데이터를 csv로 정제
 
 ### 베이스라인 설계
-- [ ] BaseLine 개발
+- [x] BaseLine 개발
 
 ### 벡터 데이터베이스 활용
-- [ ] ChromaDB 생성
+- [x] ChromaDB 생성
 
 ### 기능구현
 - RAG pipeline 개발
