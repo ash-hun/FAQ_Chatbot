@@ -166,3 +166,5 @@ cython_debug/
 test/
 model/*
 data/DB/
+data/DB_docs/
+data/DB_ko-sroberta-multitask/
