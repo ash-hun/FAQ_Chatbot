@@ -4,9 +4,11 @@ import os
 
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain_community.vectorstores import Chroma
-from langchain.chains import RetrievalQA
+from langchain.chains import RetrievalQA, ConversationChain
+from langchain.memory import ConversationBufferMemory
+from langchain.prompts import PromptTemplate
 
 from actions.model import getHFEmbedding
 
@@ -31,12 +33,13 @@ if __name__ == "__main__":
     llm = ChatOpenAI(temperature=0, model="gpt-4-turbo-preview", max_tokens=1024)
 
     # text splitter
-    text_splitter = CharacterTextSplitter(chunk_size=3000, chunk_overlap=100)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000)
     documents = text_splitter.split_documents(data)
-    # print(f" ► Document Example : {documents[0]}") # log
 
-    db = Chroma.from_documents(documents, embeddingModel, persist_directory="./data/DB/")
+    # db = Chroma.from_documents(documents, embeddingModel, persist_directory="./data/DB/")
+    db = Chroma(persist_directory="./data/DB/", embedding_function=embeddingModel)
 
-    query = "숏클립 복구 가능해요?"
-    docs = db.similarity_search(query)
-    print(docs[0].page_content)
+    query = "미성년자도 판매 회원 등록이 가능한가요?"
+    qa_chain = RetrievalQA.from_chain_type(llm, retriever=db.as_retriever())
+    response = qa_chain.invoke({"query": query})
+    print(response)
