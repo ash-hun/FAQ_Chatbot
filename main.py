@@ -1,6 +1,7 @@
 import pandas as pd
 import torch
 import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import CharacterTextSplitter
@@ -8,9 +9,8 @@ from langchain_openai import ChatOpenAI
 from langchain_community.vectorstores import Chroma
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
-from langchain.memory import ConversationBufferMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from operator import itemgetter
+from langchain_core.messages import HumanMessage, AIMessage
 
 from actions.model import getHFEmbedding
 
@@ -38,15 +38,19 @@ def create_chain(db):
     retriever=db.as_retriever(search_kwargs={'k': 1})
     
     # prompt
-    prompt = ChatPromptTemplate.from_template(
-        """You are an assistant for question-answering tasks from documents.
+    system_prompt = """You are an assistant for question-answering tasks from documents.
         Use the following pieces of retrieved context to answer the question.
         If question doesn't about the SmartStore, just say that "저는 스마트 스토어 FAQ를 위한 챗봇입니다. 스마트 스토어에 대한 질문을 부탁드립니다.".
         the others, answer the question from documents.
         
         Context : {context}
-        Qusetion : {input}
-        """)
+        """
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        MessagesPlaceholder(variable_name='chat_history'),
+        ("human", "{input}")
+    ])
 
     # stuff_chain
     stuff_chain = create_stuff_documents_chain(
@@ -62,11 +66,12 @@ def create_chain(db):
 
     return chain
 
-def chat(chain, user_input):
-    response = chain.invoke({"input": user_input})
-    print("===" * 20)
-    print(f"[HUMAN]\n{user_input}\n")
-    print(f"[AI]\n{response['answer']}")
+def chat(chain, user_input, chat_history):
+    response = chain.invoke({
+        "input": user_input,
+        "chat_history": chat_history
+    })
+    return response['answer']
 
 if __name__ == "__main__":
     # Device Set
@@ -81,12 +86,16 @@ if __name__ == "__main__":
     db = create_DB(embeddingModel)
     QAchain = create_chain(db)
 
-    # Memory
-    # memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=1024)
-    # memory = ConversationBufferMemory(memory_key="chat_history")
-    # memory.load_memory_variables({})
-
+    chat_history = []
     while True:
-        human_input = input()
-        if human_input != 'exit':
-            chat(QAchain, human_input)
+        print("===" * 40)
+        print()
+        human_input = input("[HUMAN] : ")
+        if human_input == 'exit':
+            break
+        else:
+            chatbot_res = chat(QAchain, human_input, chat_history)
+            chat_history.append(HumanMessage(content=human_input))
+            chat_history.append(AIMessage(content=chatbot_res))
+            print(f"[FAQ Bot] : {chatbot_res}")
+            print()
