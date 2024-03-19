@@ -1,32 +1,23 @@
-import pandas as pd
 import torch
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from langchain_community.document_loaders.csv_loader import CSVLoader
-from langchain.text_splitter import CharacterTextSplitter
-from langchain_openai import ChatOpenAI
-from langchain_community.vectorstores import Chroma
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains import create_retrieval_chain
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
+# from langchain.text_splitter import CharacterTextSplitter
+from langchain.chains import create_retrieval_chain
+from langchain_community.vectorstores import Chroma
+from langchain_openai import ChatOpenAI
 
-from actions.model import getHFEmbedding
+from actions.embeddings import getHFEmbedding
 
+# def document_Process(data):
+#     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=10, length_function=len)
+#     documents = text_splitter.split_documents(data)
+#     return documents
 
-def load_data(file_path):
-    dataLoader = CSVLoader(file_path=file_path)
-    data = dataLoader.load()
-    return data
-
-def document_Process(data):
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=10, length_function=len)
-    documents = text_splitter.split_documents(data)
-    return documents
-
-def create_DB(embeddingModel, docs=None):
-    # db = Chroma.from_documents(docs, embeddingModel, persist_directory="./data/DB_ko-sroberta-multitask/") ## Local DB 생성
+def create_DB(embeddingModel):
     db = Chroma(persist_directory="./data/DB_ko-sroberta-multitask/", embedding_function=embeddingModel)
     return db
 
@@ -79,14 +70,16 @@ if __name__ == "__main__":
 
     # Check Model or Download
     embeddingModel = getHFEmbedding(hf_model="jhgan/ko-sroberta-multitask", device=device)
-    
-    # data = load_data('./data/Documents.csv')
-    # document_Process(data)
 
     db = create_DB(embeddingModel)
     QAchain = create_chain(db)
 
+    # Chatting History
     chat_history = []
+
+    # --------------------------------------------------------------------------------
+    # CLI
+    print("FAQ Chatting입니다. 종료를 위해서는 exit를 입력해주세요.")
     while True:
         print("===" * 40)
         print()

@@ -163,8 +163,4 @@ cython_debug/
 .DS_Store
 
 # Project Env
-test/
 model/*
-data/DB/
-data/DB_docs/
-data/DB_ko-sroberta-multitask/
